@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kalkulator Partisi Windows</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-color: #f0f2f5; 
+            margin: 0; 
+            padding: 20px; 
+            display: flex; 
+            justify-content: center; 
+        }
+        .card { 
+            background: white; 
+            padding: 25px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
+            width: 100%; 
+            max-width: 400px; 
+        }
+        h2 { 
+            margin-top: 0; 
+            color: #1a73e8; 
+            text-align: center; 
+        }
+        .form-group { margin-bottom: 20px; }
+        label { 
+            display: block; 
+            font-weight: 600; 
+            margin-bottom: 5px; 
+            color: #333; 
+        }
+        input { 
+            width: 100%; 
+            padding: 12px; 
+            border: 1px solid #ccc; 
+            border-radius: 6px; 
+            box-sizing: border-box; 
+            font-size: 16px; 
+        }
+        input:focus { 
+            outline: none; 
+            border-color: #1a73e8; 
+            box-shadow: 0 0 5px rgba(26,115,232,0.3); 
+        }
+        .help-text { font-size: 12px; color: #666; margin-top: 5px; }
+        .result-box { 
+            margin-top: 20px; 
+            padding: 15px; 
+            background-color: #e8f0fe; 
+            border-left: 5px solid #1a73e8; 
+            border-radius: 6px; 
+            display: none; 
+            animation: fadeIn 0.3s;
+        }
+        .result-box.error { 
+            background-color: #fce8e6; 
+            border-left-color: #d93025; 
+        }
+        .mb-result { 
+            font-size: 28px; 
+            font-weight: bold; 
+            color: #1a73e8; 
+            margin: 5px 0; 
+            letter-spacing: 1px;
+        }
+        hr { border: 0; border-top: 1px solid #ddd; margin: 15px 0; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>Kalkulator Partisi</h2>
+        
+        <div class="form-group">
+            <label>1. Kapasitas Total Saat Ini:</label>
+            <input type="number" id="totalSpace" placeholder="Contoh: 488384 atau 476.9" oninput="calculate()" step="any">
+            <div class="help-text">*Ketik langsung angkanya. Boleh format MB (cth: 488384) atau GB (cth: 476.9)</div>
+        </div>
+
+        <div class="form-group">
+            <label>2. Ukuran Drive C yang Diinginkan (GB):</label>
+            <input type="number" id="targetC" placeholder="Contoh: 200" oninput="calculate()" step="any">
+            <div class="help-text">*Hanya masukkan angka GB-nya saja.</div>
+        </div>
+
+        <div id="resultContainer" class="result-box">
+            <div style="font-size: 14px; color: #444;">Ketik angka ini di kolom <b>Size in MB</b>:</div>
+            <div class="mb-result" id="mbToType">0</div>
+            
+            <hr>
+            
+            <div style="font-size: 14px; color: #444; margin-bottom: 5px;"><b>Sisa Kapasitas (Unallocated Space):</b></div>
+            <div style="font-weight: bold; color: #188038; font-size: 20px;" id="remainGB">0 GB</div>
+            <div style="font-size: 14px; color: #555; margin-top: 2px;" id="remainMB">(0 MB)</div>
+            <div style="font-size: 12px; color: #666; margin-top: 8px;">*Sisa ini nantinya bisa Anda jadikan Drive D utuh, atau dipecah lagi dengan cara yang sama.</div>
+        </div>
+    </div>
+
+    <script>
+        function calculate() {
+            const totalInput = parseFloat(document.getElementById('totalSpace').value);
+            const targetCInput = parseFloat(document.getElementById('targetC').value);
+            const resultContainer = document.getElementById('resultContainer');
+            const mbToTypeEl = document.getElementById('mbToType');
+            const remainGBEl = document.getElementById('remainGB');
+            const remainMBEl = document.getElementById('remainMB');
+
+            // Cek jika input kosong atau bukan angka
+            if (isNaN(totalInput) || isNaN(targetCInput)) {
+                resultContainer.style.display = 'none';
+                return;
+            }
+
+            // Logika Auto-Detect MB atau GB: 
+            // Jika angka di atas 10.000, pasti itu MB (contoh 488384)
+            // Jika angka kecil, pasti itu GB (contoh 476.9)
+            let totalMB = totalInput > 10000 ? totalInput : totalInput * 1024;
+            
+            // Rumus Windows: 1 GB = 1024 MB
+            let targetCMB = Math.round(targetCInput * 1024);
+
+            if (targetCMB > totalMB) {
+                // Tampilan Error jika Drive C lebih besar dari SSD
+                resultContainer.className = 'result-box error';
+                resultContainer.style.display = 'block';
+                mbToTypeEl.style.color = '#d93025';
+                mbToTypeEl.innerText = "Error: Target melebihi kapasitas SSD!";
+                remainGBEl.innerText = "-";
+                remainMBEl.innerText = "-";
+            } else {
+                // Tampilan Sukses
+                resultContainer.className = 'result-box';
+                resultContainer.style.display = 'block';
+                mbToTypeEl.style.color = '#1a73e8';
+                
+                mbToTypeEl.innerText = targetCMB;
+
+                let remainMB = Math.round(totalMB - targetCMB);
+                let remainGB = (remainMB / 1024).toFixed(2); // Dibulatkan 2 angka di belakang koma
+                
+                remainGBEl.innerText = remainGB + " GB";
+                remainMBEl.innerText = "(atau " + remainMB + " MB)";
+            }
+        }
+    </script>
+</body>
+</html>
